@@ -1,0 +1,35 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  imageName: 'nodeapp'
+
+steps:
+
+- task: NodeTool@0
+  inputs:
+    versionSpec: '18.x'
+
+- script: |
+    npm install
+    npm run build --if-present
+    npm test --if-present
+  displayName: 'Install, Build & Test'
+
+- task: Docker@2
+  inputs:
+    containerRegistry: '<your-ACR-service-connection>'
+    repository: '$(imageName)'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: |
+      $(Build.BuildId)
+
+- task: AzureWebAppContainer@1
+  inputs:
+    azureSubscription: '<azure-service-connection>'
+    appName: '<your-app-name>'
+    containers: '<your-acr-name>.azurecr.io/nodeapp:$(Build.BuildId)'
